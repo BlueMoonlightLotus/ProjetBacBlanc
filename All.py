@@ -65,6 +65,10 @@ class PeriodSelectionWidget(QWidget):
 
         # Calculer le nombre total de jours dans l'intervalle
         delta_days = (end_date.toJulianDay() - start_date.toJulianDay()) + 1
+        if delta_days < 0:
+            self.days_label.setText(f"Nombre de jours dans l'intervalle : /")
+            self.weeks_label.setText(f"Nombre de semaines dans l'intervalle : /")
+            return
 
         # Convertir les objets QDate en objets datetime.date
         start_pydate = datetime.date(start_date.year(), start_date.month(), start_date.day())
@@ -99,14 +103,14 @@ class MainWindow(QWidget):
         def __init__(self):
             super().__init__()
             self.initUI()
-            self.current_student = "Cedric Michel"
+            self.current_student = BDD_etudiants[0]
             self.week_matrices = BDD_etudiants_week_matrices[self.current_student]
             self.comboBox.currentIndexChanged.connect(self.update_current_student)
             
              
             
         def update_current_student(self):
-            # Mettre à jour self.current_student avec le nom de l'étudiant sélectionné dans le menu déroulant
+            # Mettre à jour self.current_student avec le nom de l'élève sélectionné dans le menu déroulant
             self.current_student = self.comboBox.currentText()
             
             self.week_matrices = BDD_etudiants_week_matrices[self.current_student]
@@ -118,7 +122,7 @@ class MainWindow(QWidget):
            
             
         def initUI(self):
-            self.setWindowTitle('Organisateur Bac Blanc (pour M.Michel)')
+            self.setWindowTitle('Organisateur Bac Blanc (pour M. Michel)')
             
 
             # Création d'un layout vertical pour organiser les widgets
@@ -142,7 +146,7 @@ class MainWindow(QWidget):
             top_bar_layout.setSpacing(10)  # Ajout d'espacement entre les widgets
             top_bar.setLayout(top_bar_layout)
 
-            # Ajout du menu défilant avec tous les étudiants
+            # Ajout du menu défilant avec tous les élèves
             self.comboBox = QComboBox()
             self.comboBox.addItems(BDD_etudiants)
             self.comboBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Politique de taille
@@ -156,7 +160,7 @@ class MainWindow(QWidget):
             button_text_layout = QVBoxLayout()
             top_bar_layout.addLayout(button_text_layout)
 
-            # Ajout d'une zone de texte pour entrer le nom de l'étudiant
+            # Ajout d'une zone de texte pour entrer le nom de l'élève
             self.lineEdit = QLineEdit()
             self.lineEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Politique de taille
             self.lineEdit.textChanged.connect(self.check_text)  # Connexion de l'événement textChanged
@@ -166,16 +170,16 @@ class MainWindow(QWidget):
             add_remove_layout = QHBoxLayout()
             button_text_layout.addLayout(add_remove_layout)
 
-            # Ajout d'un bouton "Ajouter Étudiant" pour ajouter l'étudiant à la BDD
-            self.addButton = QPushButton("Ajouter Étudiant")
+            # Ajout d'un bouton "Ajouter Élève" pour ajouter l'élève à la BDD
+            self.addButton = QPushButton("Ajouter Élève")
             self.addButton.setStyleSheet("background-color: green; color: white;")  # Définir la couleur du bouton
             self.addButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Politique de taille
             self.addButton.clicked.connect(self.addStudent)
             self.addButton.setEnabled(False)  # Désactiver le bouton au démarrage
             add_remove_layout.addWidget(self.addButton)
 
-            # Ajout d'un bouton "Supprimer Étudiant" pour supprimer l'étudiant de la BDD
-            self.removeButton = QPushButton("Supprimer Étudiant")
+            # Ajout d'un bouton "Supprimer Élève" pour supprimer l'élève de la BDD
+            self.removeButton = QPushButton("Supprimer Élève")
             self.removeButton.setStyleSheet("background-color: red; color: white;")  # Définir la couleur du bouton
             self.removeButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Politique de taille
             self.removeButton.clicked.connect(self.removeStudent)
@@ -191,8 +195,8 @@ class MainWindow(QWidget):
             button_text_layout.addWidget(self.lineEdit)
             
 
-            # Ajout d'un label pour afficher le nom de l'étudiant
-            self.label = QLabel("Liste des étudiants :")
+            # Ajout d'un label pour afficher le nom de l'élève
+            self.label = QLabel("Liste des élèves :")
             layout.addWidget(self.label)
 
             # emploi du temps 
@@ -408,7 +412,7 @@ class MainWindow(QWidget):
                     if cell_data != -1 and cell_data != 0 and cell_data != 1 and cell_data != 2:
                         continue  # Ne pas insérer de valeur dans la cellule
                     if self.current_student != "Cedric Michel" and BDD_etudiants_week_matrices["Cedric Michel"].get(self.current_week_index, [[]])[row_index][column_index] == -1 or 0:
-                        cell_data = -1  # La cellule doit être -1 pour les autres étudiants si la matrice de Cedric Michel contient -1 à cet endroit
+                        cell_data = -1  # La cellule doit être -1 pour les autres élèves si la matrice de Cedric Michel contient -1 à cet endroit
                     item = QTableWidgetItem("")  # Cellule vide
                     item.setFlags(item.flags() ^ Qt.ItemIsEditable)  # Désactiver l'édition
 
@@ -479,6 +483,7 @@ class MainWindow(QWidget):
                     if item:
                         item.setBackground(self.get_color(color))
             self.harmonisation()
+            
         def get_color(self, color):
             # Fonction pour obtenir la couleur en fonction de la valeur
             if color == 0:
@@ -515,17 +520,17 @@ class MainWindow(QWidget):
                 
                      
         def addStudent(self):
-            # Récupérer le nom de l'étudiant depuis la zone de texte
+            # Récupérer le nom de l'élève depuis la zone de texte
             new_student = self.lineEdit.text()
             if new_student.strip() == "":
                 return  # Ne rien faire si le champ est vide
             
-            # Ajouter le nouvel étudiant à la liste et mettre à jour le menu défilant
+            # Ajouter le nouvel élève à la liste et mettre à jour le menu défilant
             BDD_etudiants.append(new_student)
             self.comboBox.addItem(new_student)
             BDD_etudiants_week_matrices[new_student] = {}
             self.current_student = new_student
-            # Sélectionner automatiquement le nouvel étudiant ajouté dans le menu déroulant
+            # Sélectionner automatiquement le nouvel élève ajouté dans le menu déroulant
             index = self.comboBox.findText(new_student)
             self.comboBox.setCurrentIndex(index)
 
@@ -544,12 +549,12 @@ class MainWindow(QWidget):
             # Récupérer l'index de l'élément sélectionné dans le menu défilant
             index = self.comboBox.currentIndex()
             
-            # Récupérer le nom de l'étudiant sélectionné
+            # Récupérer le nom de l'élève sélectionné
             selected_student = self.comboBox.currentText()
             
-            # Vérifier si l'étudiant sélectionné est différent de "Cedric Michel"
+            # Vérifier si l'élève sélectionné est différent de "Cedric Michel"
             if selected_student != "Cedric Michel":
-                # Supprimer l'étudiant de la liste et mettre à jour le menu défilant
+                # Supprimer l'élève de la liste et mettre à jour le menu défilant
                 if index != -1:
                     BDD_etudiants.remove(f"{selected_student}")
                     self.comboBox.removeItem(index)
@@ -589,12 +594,13 @@ class MainWindow(QWidget):
             self.period_info_label.setText(self.period_info_label.text() + f"\nNombre de semaines : {num_weeks}")
             
         def harmonisation(self):
-            if self.current_student != "Cedric Michel":
+            if self.current_student != BDD_etudiants[0]:
                 for h in range(22):
                     for j in range(7):
-                        if BDD_etudiants_week_matrices["Cedric Michel"][self.current_week_index][h][j] in (-1, 0):
+                        if BDD_etudiants_week_matrices[BDD_etudiants[0]][self.current_week_index][h][j] in (-1, 0):
                             self.week_matrices[self.current_week_index][h][j] = -1
                 self.populate_table()
+                
 if __name__ == '__main__':
         app = QApplication(sys.argv)
         mainWindow = MainWindow()
